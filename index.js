@@ -70,7 +70,7 @@ app.get("/allstories", async (req, res) => {
 const fetchUser = async (req, res, next) => {
   try {
     const token = req.header("auth-token");
-    // console.log(token,"auth");
+    // console.log(token, "auth");
     if (!token) {
       return res.status(401).json({
         message: "Please authenticate using a valid token",
@@ -78,7 +78,7 @@ const fetchUser = async (req, res, next) => {
     }
 
     const data = jwt.verify(token, "secret_ecom");
-    // console.log(data,"dataatttt");
+    console.log(data, "dataatttt");
     req.user = data;
     // console.log(data.user);
     next();
@@ -127,6 +127,28 @@ app.post("/userstories", fetchUser, async (req, res) => {
   }
 });
 
+app.put('/updatestory', async (req, res) => {
+  try {
+    const dataToUpdate = req.body;
+    // console.log(dataToUpdate);
+    for (const obj of dataToUpdate) {
+      const { _id, ...update } = obj;
+      const existingObject = await Story.findOne({ _id });
+      if (existingObject) {
+        await Story.updateOne({ _id }, update);
+      } else {
+        console.log(`Object with _id ${_id} does not exist.`);
+      }
+    }
+    res.status(200).send("Data updated successfully");
+  } catch (error) {
+    console.error('Error updating data:', error);
+    res.status(500).send("Error updating data");
+  }
+});
+
+
+
 //creating api for getting user story
 
 app.get("/mystory", fetchUser, async (req, res) => {
@@ -159,6 +181,40 @@ app.get("/mystory", fetchUser, async (req, res) => {
     });
   }
 });
+//creating api for getting user story
+
+app.get("/mystory/:id", fetchUser, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const userStory = await Story.find({ user_id: req.user.id, id: id });
+
+    if (!userStory) {
+      return res.status(404).json({
+        status: "failed",
+        message: "Story not found",
+      });
+    }
+
+    // Assuming creation_time is a field in your Story model
+    const creationTime = userStory[0].creation_time;
+    const topStories = await Story.find({ creation_time: creationTime, user_id: req.user.id });
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        topStories,
+      },
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({
+      status: "failed",
+      message: "Internal server error",
+    });
+  }
+});
+
 
 ///Creating Api for all the filters
 
@@ -591,3 +647,6 @@ app.post("/removelikedstory", fetchUser, async (req, res) => {
 app.listen(port, () => {
   console.log("Listening to port 4000");
 });
+
+
+
